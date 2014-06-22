@@ -1,6 +1,6 @@
 # Hammock
 
-Easily sync CouchDB design documents with an RCS of your choosing.
+Relax even further and have Hammock manage your CouchDB design documents while you manage JavaScript files in source control.
 
 ## Usage
 
@@ -43,6 +43,7 @@ And call `Sync`:
 The only difference `Sync` does not try to correct (yet) is deleting design documents that exist in the database but not on the disk.
 
 ## TODO
-* Add tests
+* Add tests.
+* Support CoffeeScript files.
 * Add an option for freezing documents, so that `Sync` will not attempt to override the CouchDB content.
 * Consider deleting documents from CouchDB when they do not exist on disk.
