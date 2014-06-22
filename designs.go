@@ -11,25 +11,32 @@ import (
 	"github.com/mikebell-org/go-couchdb"
 )
 
-type viewData struct {
+type CouchDB struct {
+	couchdb.CouchDB
+}
+
+type viewMapReduceFunctions struct {
 	MapFunc    string `json:"map,omitempty"`
 	ReduceFunc string `json:"reduce,omitempty"`
 }
 
-type designDocData struct {
-	TypedDocumentWithMtime
-	Language string               `json:"language,omitempty"`
-	Views    map[string]*viewData `json:"views,omitempty"`
-	Updates  map[string]string    `json:"updates,omitempty"`
+type designDocViews map[string]*viewMapReduceFunctions
+type designDocFunctions map[string]string
+
+type designDocument struct {
+	couchdb.BasicDocumentWithMtime
+	Language string             `json:"language,omitempty"`
+	Views    designDocViews     `json:"views,omitempty"`
+	Updates  designDocFunctions `json:"updates,omitempty"`
 }
 
-const (
-	designs_root = "designs"
-)
+type designDocCollection struct {
+	Documents map[string]*designDocument
+}
 
 func readFileContents(path string, contents *string) error {
 
-	if file, err := os.Open("./" + path); err != nil {
+	if file, err := os.Open(path); err != nil {
 
 		return err
 	} else {
@@ -51,17 +58,22 @@ func readFileContents(path string, contents *string) error {
 	return nil
 }
 
-func newDesignDoc() *designDocData {
+func newDesignDocument() *designDocument {
 
-	return &designDocData{Language: "javascript", Views: map[string]*viewData{}, Updates: map[string]string{}}
+	return &designDocument{Language: "javascript", Views: designDocViews{}, Updates: map[string]string{}}
 }
 
-func readDesignDocsFromDisk(path string, data map[string]*designDocData) error {
+func newDesignDocCollection() *designDocCollection {
+
+	return &designDocCollection{Documents: map[string]*designDocument{}}
+}
+
+func (data *designDocCollection) readDesignDocsFromDisk(designs_root string) error {
 
 	// TODO: make the update function handler more generic so it also handles
 	//       list, filter, show functions, etc.
 
-	fmt.Printf("Scanning design docs at %v\n", path)
+	fmt.Printf("Scanning design docs at %v\n", designs_root)
 
 	// read all design docs and make sure the DB is updated with the latest
 	// versions of the code
@@ -76,17 +88,17 @@ func readDesignDocsFromDisk(path string, data map[string]*designDocData) error {
 			view_name := parts[num_parts-2]
 			doc_name := fmt.Sprintf("_design/%v", parts[num_parts-4])
 
-			if _, ok := data[doc_name]; !ok {
+			if _, ok := data.Documents[doc_name]; !ok {
 
 				fmt.Printf("Creating new design document %v\n", doc_name)
-				data[doc_name] = newDesignDoc()
+				data.Documents[doc_name] = newDesignDocument()
 			}
 
-			if _, ok := data[doc_name].Views[view_name]; !ok {
+			if _, ok := data.Documents[doc_name].Views[view_name]; !ok {
 
-				data[doc_name].Views[view_name] = &viewData{}
+				data.Documents[doc_name].Views[view_name] = &viewMapReduceFunctions{}
 			}
-			view := data[doc_name].Views[view_name]
+			view := data.Documents[doc_name].Views[view_name]
 
 			fmt.Printf("%v/_view/%v", doc_name, view_name)
 			if parts[num_parts-1] == "map.js" {
@@ -109,10 +121,10 @@ func readDesignDocsFromDisk(path string, data map[string]*designDocData) error {
 			doc_name := fmt.Sprintf("_design/%v", parts[num_parts-3])
 			func_name := strings.TrimSuffix(parts[num_parts-1], ".js")
 
-			if _, ok := data[doc_name]; !ok {
+			if _, ok := data.Documents[doc_name]; !ok {
 
 				fmt.Printf("Creating new design document %v\n", doc_name)
-				data[doc_name] = newDesignDoc()
+				data.Documents[doc_name] = newDesignDocument()
 			}
 			fmt.Printf("%v/_view/%v update function\n", doc_name, func_name)
 
@@ -123,7 +135,7 @@ func readDesignDocsFromDisk(path string, data map[string]*designDocData) error {
 				return err
 			}
 
-			data[doc_name].Updates[func_name] = update_func
+			data.Documents[doc_name].Updates[func_name] = update_func
 		} else if err != nil {
 
 			return err
@@ -151,9 +163,9 @@ func keys(m interface{}) interface{} {
 	return keys.Interface()
 }
 
-func (this *designDocData) update(other *designDocData) (updated bool) {
+func (this *designDocument) update(other *designDocument) (updated bool) {
 
-	// TODO: handle designDocData.Language
+	// TODO: handle designDocument.Language
 	// TODO: make the update function handling code more generic so it also
 	//       handles other type of functions (list, show, filter, etc.)
 
@@ -241,16 +253,24 @@ func (this *designDocData) update(other *designDocData) (updated bool) {
 	return
 }
 
-func syncDesignDocs(db *couchdb.CouchDB) error {
+func Database(host, database, username, password string) (*CouchDB, error) {
+
+	db, err := couchdb.Database(host, database, username, password)
+
+	return &CouchDB{*db}, err
+}
+
+func Sync(db *CouchDB, path string) error {
 
 	// TODO: implement a document freezing option
 
-	disk_data := map[string]*designDocData{}
-	if err := readDesignDocsFromDisk(designs_root, disk_data); err == nil {
+	disk_data := newDesignDocCollection()
+	fmt.Printf("%+v", disk_data)
+	if err := disk_data.readDesignDocsFromDisk(path); err == nil {
 
-		db_data := newDesignDoc()
+		db_data := newDesignDocument()
 
-		for doc_name, document := range disk_data {
+		for doc_name, document := range disk_data.Documents {
 
 			if err := db.GetDocument(&db_data, fmt.Sprintf("%v", doc_name)); err != nil || db_data.update(document) {
 
