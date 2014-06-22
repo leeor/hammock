@@ -21,6 +21,7 @@ type designDocFunctions map[string]string
 
 type designDocument struct {
 	couchdb.BasicDocumentWithMtime
+	Name     string             `json:"-"`
 	Language string             `json:"language,omitempty"`
 	Views    designDocViews     `json:"views,omitempty"`
 	Shows    designDocFunctions `json:"shows,omitempty"`
@@ -54,9 +55,9 @@ func readFileContents(path string, contents *string) error {
 	return nil
 }
 
-func newDesignDocument() *designDocument {
+func newDesignDocument(name string) *designDocument {
 
-	return &designDocument{Language: "javascript", Views: designDocViews{}, Updates: map[string]string{}}
+	return &designDocument{Name: name, Language: "javascript", Views: designDocViews{}, Updates: map[string]string{}}
 }
 
 // http://play.golang.org/p/0lb3Hg8nT1
@@ -219,7 +220,7 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if _, ok := other.Views[name]; !ok {
 
-			changes = append(changes, fmt.Sprintf("View %v needs to be deleted", name))
+			changes = append(changes, fmt.Sprintf("View %v/_view/%v needs to be deleted", this.Name, name))
 			delete(this.Views, name)
 			updated = true
 
@@ -228,14 +229,14 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if this.Views[name].MapFunc != other.Views[name].MapFunc {
 
-			changes = append(changes, fmt.Sprintf("Map funcion for view %v is out of date", name))
+			changes = append(changes, fmt.Sprintf("Map function for view %v/_view/%v is out of date", this.Name, name))
 			this.Views[name].MapFunc = other.Views[name].MapFunc
 			updated = true
 		}
 
 		if this.Views[name].ReduceFunc != other.Views[name].ReduceFunc {
 
-			changes = append(changes, fmt.Sprintf("Reduce funcion for view %v is out of date", name))
+			changes = append(changes, fmt.Sprintf("Reduce function for view %v/_view/%v is out of date", this.Name, name))
 			this.Views[name].ReduceFunc = other.Views[name].ReduceFunc
 			updated = true
 		}

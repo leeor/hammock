@@ -25,21 +25,23 @@ func Sync(db *CouchDB, path string) (changes []string, err error) {
 
 	if err = disk_data.loadFromDisk(path); err == nil {
 
-		db_data := newDesignDocument()
-
 		for doc_name, document := range disk_data.Documents {
 
-			if err = db.GetDocument(&db_data, fmt.Sprintf("%v", doc_name)); err == nil {
+			db_data := newDesignDocument(doc_name)
 
-				if updated, doc_changes := db_data.update(document); updated {
+			if err = db.GetDocument(&db_data, fmt.Sprintf("%v", doc_name)); err != nil {
 
-					changes = append(changes, doc_changes...)
+				changes = append(changes, fmt.Sprintf("Design document %v is missing", doc_name))
+			}
 
-					if success, e := db.PutDocument(db_data, doc_name); e != nil || !success.OK {
+			if updated, doc_changes := db_data.update(document); updated {
 
-						err = e
-						return
-					}
+				changes = append(changes, doc_changes...)
+
+				if success, e := db.PutDocument(db_data, doc_name); e != nil || !success.OK {
+
+					err = e
+					return
 				}
 			}
 		}

@@ -34,7 +34,7 @@ func (data *designDocCollection) loadFromDisk(designs_root string) error {
 
 			if _, ok := data.Documents[doc_name]; !ok {
 
-				data.Documents[doc_name] = newDesignDocument()
+				data.Documents[doc_name] = newDesignDocument(doc_name)
 			}
 
 			data.Documents[doc_name].loadFromDisk(path)
