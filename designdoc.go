@@ -201,11 +201,50 @@ func (doc *designDocument) loadFromDisk(document_root string) error {
 	return err
 }
 
+func updateDesignDocFunctions(this designDocFunctions, other designDocFunctions, func_type string) (updated bool, changes []string) {
+
+	// compare update functions
+	this_updates := sort.StringSlice(keys(this).([]string))
+	this_updates.Sort()
+
+	other_updates := sort.StringSlice(keys(other).([]string))
+	other_updates.Sort()
+
+	for _, name := range this_updates {
+
+		if _, ok := other[name]; !ok {
+
+			changes = append(changes, fmt.Sprintf("Function %v/%v needs to be deleted", func_type, name))
+			delete(this, name)
+			updated = true
+
+			break
+		}
+
+		if this[name] != other[name] {
+
+			changes = append(changes, fmt.Sprintf("Function %v/%v is out of date", func_type, name))
+			this[name] = other[name]
+			updated = true
+		}
+	}
+
+	for _, name := range other_updates {
+
+		if _, ok := this[name]; !ok {
+
+			changes = append(changes, fmt.Sprintf("Function %v/%v is missing", func_type, name))
+			this[name] = other[name]
+			updated = true
+		}
+	}
+
+	return
+}
+
 func (this *designDocument) update(other *designDocument) (updated bool, changes []string) {
 
 	// TODO: handle designDocument.Language
-	// TODO: make the update function handling code more generic so it also
-	//       handles other type of functions (list, show, filter, etc.)
 
 	updated = false
 
@@ -246,46 +285,40 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if _, ok := this.Views[name]; !ok {
 
-			changes = append(changes, fmt.Sprintf("View %v is missing", name))
+			changes = append(changes, fmt.Sprintf("View %v/_view/%v is missing", this.Name, name))
 			this.Views[name] = other.Views[name]
 			updated = true
 		}
 	}
 
-	// compare update functions
-	this_updates := sort.StringSlice(keys(this.Updates).([]string))
-	this_updates.Sort()
+	if u, c := updateDesignDocFunctions(this.Shows, other.Shows, fmt.Sprintf("%v/_shows", this.Name)); u {
 
-	other_updates := sort.StringSlice(keys(other.Updates).([]string))
-	other_updates.Sort()
-
-	for _, name := range this_updates {
-
-		if _, ok := other.Updates[name]; !ok {
-
-			changes = append(changes, fmt.Sprintf("Update function %v needs to be deleted", name))
-			delete(this.Updates, name)
-			updated = true
-
-			break
-		}
-
-		if this.Updates[name] != other.Updates[name] {
-
-			changes = append(changes, fmt.Sprintf("Update funcion %v is out of date", name))
-			this.Updates[name] = other.Updates[name]
-			updated = true
-		}
+		updated = true
+		changes = append(changes, c...)
 	}
 
-	for _, name := range other_updates {
+	if u, c := updateDesignDocFunctions(this.Lists, other.Lists, fmt.Sprintf("%v/_lists", this.Name)); u {
 
-		if _, ok := this.Updates[name]; !ok {
+		updated = true
+		changes = append(changes, c...)
+	}
 
-			changes = append(changes, fmt.Sprintf("Updated function %v is missing", name))
-			this.Updates[name] = other.Updates[name]
-			updated = true
-		}
+	if u, c := updateDesignDocFunctions(this.Filters, other.Filters, fmt.Sprintf("%v/_filters", this.Name)); u {
+
+		updated = true
+		changes = append(changes, c...)
+	}
+
+	if u, c := updateDesignDocFunctions(this.Updates, other.Updates, fmt.Sprintf("%v/_updates", this.Name)); u {
+
+		updated = true
+		changes = append(changes, c...)
+	}
+
+	if u, c := updateDesignDocFunctions(this.Validate, other.Validate, fmt.Sprintf("%v/_validate_on_update", this.Name)); u {
+
+		updated = true
+		changes = append(changes, c...)
 	}
 
 	return
