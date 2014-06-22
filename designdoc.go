@@ -219,7 +219,7 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if _, ok := other.Views[name]; !ok {
 
-			changes = append(changes, fmt.Sprintf("View %v needs to be deleted\n", name))
+			changes = append(changes, fmt.Sprintf("View %v needs to be deleted", name))
 			delete(this.Views, name)
 			updated = true
 
@@ -228,14 +228,14 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if this.Views[name].MapFunc != other.Views[name].MapFunc {
 
-			changes = append(changes, fmt.Sprintf("Map funcion for view %v is out of date\n", name))
+			changes = append(changes, fmt.Sprintf("Map funcion for view %v is out of date", name))
 			this.Views[name].MapFunc = other.Views[name].MapFunc
 			updated = true
 		}
 
 		if this.Views[name].ReduceFunc != other.Views[name].ReduceFunc {
 
-			changes = append(changes, fmt.Sprintf("Reduce funcion for view %v is out of date\n", name))
+			changes = append(changes, fmt.Sprintf("Reduce funcion for view %v is out of date", name))
 			this.Views[name].ReduceFunc = other.Views[name].ReduceFunc
 			updated = true
 		}
@@ -245,7 +245,7 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if _, ok := this.Views[name]; !ok {
 
-			changes = append(changes, fmt.Sprintf("View %v is missing\n", name))
+			changes = append(changes, fmt.Sprintf("View %v is missing", name))
 			this.Views[name] = other.Views[name]
 			updated = true
 		}
@@ -262,7 +262,7 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if _, ok := other.Updates[name]; !ok {
 
-			changes = append(changes, fmt.Sprintf("Update function %v needs to be deleted\n", name))
+			changes = append(changes, fmt.Sprintf("Update function %v needs to be deleted", name))
 			delete(this.Updates, name)
 			updated = true
 
@@ -271,7 +271,7 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if this.Updates[name] != other.Updates[name] {
 
-			changes = append(changes, fmt.Sprintf("Update funcion %v is out of date\n", name))
+			changes = append(changes, fmt.Sprintf("Update funcion %v is out of date", name))
 			this.Updates[name] = other.Updates[name]
 			updated = true
 		}
@@ -281,7 +281,7 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 
 		if _, ok := this.Updates[name]; !ok {
 
-			changes = append(changes, fmt.Sprintf("Updated function %v is missing\n", name))
+			changes = append(changes, fmt.Sprintf("Updated function %v is missing", name))
 			this.Updates[name] = other.Updates[name]
 			updated = true
 		}
