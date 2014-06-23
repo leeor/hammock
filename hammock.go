@@ -32,6 +32,7 @@ func Sync(db *CouchDB, path string) (changes []string, err error) {
 			if err = db.GetDocument(&db_data, fmt.Sprintf("%v", doc_name)); err != nil {
 
 				changes = append(changes, fmt.Sprintf("Design document %v is missing", doc_name))
+				err = nil
 			}
 
 			if updated, doc_changes := db_data.update(document); updated {
