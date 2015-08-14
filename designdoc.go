@@ -28,7 +28,7 @@ type designDocument struct {
 	Lists    designDocFunctions `json:"lists,omitempty"`
 	Updates  designDocFunctions `json:"updates,omitempty"`
 	Filters  designDocFunctions `json:"filters,omitempty"`
-	Validate designDocFunctions `json:"validate_doc_update,omitempty"`
+	Validate string             `json:"validate_doc_update,omitempty"`
 }
 
 func readFileContents(path string, contents *string) error {
@@ -57,7 +57,16 @@ func readFileContents(path string, contents *string) error {
 
 func newDesignDocument(name string) *designDocument {
 
-	return &designDocument{Name: name, Language: "javascript", Views: designDocViews{}, Updates: map[string]string{}}
+	return &designDocument {
+		Name: name,
+		Language: "javascript",
+		Views: designDocViews{},
+		Shows: designDocFunctions{},
+		Lists: designDocFunctions{},
+		Updates: designDocFunctions{},
+		Filters: designDocFunctions{},
+		Validate: "",
+	}
 }
 
 // http://play.golang.org/p/0lb3Hg8nT1
@@ -106,6 +115,24 @@ func (doc *designDocument) readViews(views_root string) error {
 
 					return err
 				}
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
+func (doc *designDocument) readValidateFunction(root string) error {
+
+	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
+
+		if match, _ := filepath.Match(root+"/*.js", path); match {
+
+			if err := readFileContents(path, &doc.Validate); err != nil {
+
+				return err
 			}
 		}
 
@@ -187,7 +214,7 @@ func (doc *designDocument) loadFromDisk(document_root string) error {
 			return filepath.SkipDir
 		} else if match, _ := filepath.Match(document_root+"/validate", path); match && f.IsDir() {
 
-			if err := doc.Validate.readFunctions(path); err != nil {
+			if err := doc.readValidateFunction(path); err != nil {
 
 				return err
 			}
@@ -315,10 +342,11 @@ func (this *designDocument) update(other *designDocument) (updated bool, changes
 		changes = append(changes, c...)
 	}
 
-	if u, c := updateDesignDocFunctions(this.Validate, other.Validate, fmt.Sprintf("%v/_validate_on_update", this.Name)); u {
+	if this.Validate != other.Validate {
 
+		changes = append(changes, fmt.Sprintf("Validate function for %v design is out of date", this.Name))
+		this.Validate = other.Validate
 		updated = true
-		changes = append(changes, c...)
 	}
 
 	return
